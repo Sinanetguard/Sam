@@ -2,12 +2,14 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# نصب پیش‌نیازهای ضروری و آپدیت ابزارهای pip
-RUN apt-get update && apt-get install -y git gcc python3-dev && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir git+https://github.com/alexandersp/mtprotoproxy.git
+# ۱. نصب ابزارهای دانلود اولیه
+RUN apt-get update && apt-get install -y --no-install-recommends git curl && rm -rf /var/lib/apt/lists/*
 
-# ساخت اسکریپت اصلی و هندل کردن Health Check
+# ۲. نصب پکیج‌های پیش‌سخته‌شده بدون نیاز به کامپایل و بدون مصرف رم بالا
+RUN pip install --no-cache-dir --prefer-binary cryptography pycryptodome
+RUN pip install --no-cache-dir git+https://github.com/alexandersp/mtprotoproxy.git@master
+
+# ۳. ساخت اسکریپت اصلی جهت پاسخ‌دهی به Health Check و هدایت ترافیک پروکسی
 RUN python3 -c ' \
 code = """import os, asyncio, threading\n\
 os.environ["PORT"] = "8888"\n\
