@@ -1,31 +1,26 @@
-FROM python:3.10-slim
+FROM python:3.11-alpine
 
 WORKDIR /app
 
-# ۱. نصب مستقیم کتابخانه‌های کامپایل‌شده پایتون از مخزن لینوکس (مصرف رم نزدیک به صفر)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3-cryptography \
-    python3-uvloop \
-    git \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# ۱. نصب کتابخانه‌های آماده آلپاین بدون کامپایل و بدون مصرف رم (زیر ۵ ثانیه)
+RUN apk add --no-cache git py3-cryptography
 
-# ۲. نصب پروکسی بدون کامپایل مجدد وابستگی‌ها
-RUN pip install --no-cache-dir --no-deps git+https://github.com/alexandersp/mtprotoproxy.git@master
+# ۲. دانلود مستقیم فایل‌های سورس بدون استفاده از pip
+RUN git clone --depth 1 https://github.com/alexandersp/mtprotoproxy.git /app/mtprotoproxy_src
 
-# ۳. ساخت اسکریپت اصلی برای پاس کردن Health Check و هدایت ترافیک
-RUN python3 -c ' \
-code = """import os, asyncio, threading\n\
+# ۳. اسکریپت سبک برای پاس کردن Health Check و اجرای پروکسی
+RUN echo 'import os, asyncio, sys, threading\n\
+sys.path.insert(0, "/app/mtprotoproxy_src")\n\
 os.environ["PORT"] = "8888"\n\
 def run_mtproto():\n\
     import mtprotoproxy.__main__\n\
 threading.Thread(target=run_mtproto, daemon=True).start()\n\
-PUBLIC_PORT = int(os.environ.get("PORT_PUBLIC", 8080))\n\
+PUBLIC_PORT = int(os.environ.get("PORT", 8080))\n\
 async def handle_connection(reader, writer):\n\
     try:\n\
         peek_data = await reader.read(4)\n\
         if peek_data.startswith(b"GET") or peek_data.startswith(b"HEAD") or peek_data.startswith(b"POST"):\n\
-            writer.write(b"HTTP/1.1 200 OK\\r\\nContent-Type: text/plain\\r\\nContent-Length: 2\\r\\nConnection: close\\r\\n\\r\\nOK")\n\
+            writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK")\n\
             await writer.drain()\n\
             writer.close()\n\
         else:\n\
@@ -50,10 +45,7 @@ async def start_server():\n\
     await server.serve_forever()\n\
 if __name__ == "__main__":\n\
     asyncio.run(start_server())\n\
-"""\n\
-with open("/app/main.py", "w") as f:\n\
-    f.write(code)\n\
-'
+' > /app/main.py
 
 EXPOSE 8080
 
