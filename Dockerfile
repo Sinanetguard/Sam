@@ -2,15 +2,14 @@ FROM python:3.11-alpine
 
 WORKDIR /app
 
-# ۱. نصب کتابخانه‌های آماده آلپاین بدون کامپایل و بدون مصرف رم (زیر ۵ ثانیه)
-RUN apk add --no-cache git py3-cryptography
+# ۱. نصب گواهی‌های SSL و ابزار curl به‌همراه کتابخانه آماده رمزنگاری
+RUN apk add --no-cache ca-certificates curl py3-cryptography
 
-# ۲. دانلود مستقیم فایل‌های سورس بدون استفاده از pip
-RUN git clone --depth 1 https://github.com/alexandersp/mtprotoproxy.git /app/mtprotoproxy_src
+# ۲. دانلود مستقیم سورس‌کد پروکسی به صورت فشرده (بدون نیاز به git و بدون مصرف رم)
+RUN curl -sSL https://github.com/alexandersp/mtprotoproxy/archive/refs/heads/master.tar.gz | tar -xz --strip-components=1 -C /app
 
-# ۳. اسکریپت سبک برای پاس کردن Health Check و اجرای پروکسی
+# ۳. ساخت اسکریپت مدیریت ترافیک و پاس کردن Health Check برای ویپ‌نست
 RUN echo 'import os, asyncio, sys, threading\n\
-sys.path.insert(0, "/app/mtprotoproxy_src")\n\
 os.environ["PORT"] = "8888"\n\
 def run_mtproto():\n\
     import mtprotoproxy.__main__\n\
