@@ -1,11 +1,13 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y git build-essential && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir git+https://github.com/alexandersp/mtprotoproxy.git uvloop
+# نصب پیش‌نیازهای ضروری و آپدیت ابزارهای pip
+RUN apt-get update && apt-get install -y git gcc python3-dev && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir git+https://github.com/alexandersp/mtprotoproxy.git
 
-# ساخت خودکار کد main.py در زمان بیلد داکر
+# ساخت اسکریپت اصلی و هندل کردن Health Check
 RUN python3 -c ' \
 code = """import os, asyncio, threading\n\
 os.environ["PORT"] = "8888"\n\
