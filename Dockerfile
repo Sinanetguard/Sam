@@ -2,14 +2,18 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# ۱. نصب ابزارهای دانلود اولیه
-RUN apt-get update && apt-get install -y --no-install-recommends git curl && rm -rf /var/lib/apt/lists/*
+# ۱. نصب مستقیم کتابخانه‌های کامپایل‌شده پایتون از مخزن لینوکس (مصرف رم نزدیک به صفر)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-cryptography \
+    python3-uvloop \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# ۲. نصب پکیج‌های پیش‌سخته‌شده بدون نیاز به کامپایل و بدون مصرف رم بالا
-RUN pip install --no-cache-dir --prefer-binary cryptography pycryptodome
-RUN pip install --no-cache-dir git+https://github.com/alexandersp/mtprotoproxy.git@master
+# ۲. نصب پروکسی بدون کامپایل مجدد وابستگی‌ها
+RUN pip install --no-cache-dir --no-deps git+https://github.com/alexandersp/mtprotoproxy.git@master
 
-# ۳. ساخت اسکریپت اصلی جهت پاسخ‌دهی به Health Check و هدایت ترافیک پروکسی
+# ۳. ساخت اسکریپت اصلی برای پاس کردن Health Check و هدایت ترافیک
 RUN python3 -c ' \
 code = """import os, asyncio, threading\n\
 os.environ["PORT"] = "8888"\n\
